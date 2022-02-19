@@ -1,42 +1,122 @@
 import tweepy
 
+import pandas as pd
+
+from tweepy import Cursor  # Used to perform pagination
+
 import config
 
-client = tweepy.Client(config.bearer_token)
+client = tweepy.Client(config.bearer_token)  ##Version 2.0 Auth
 
-query = 'covid -is:retweet'  # This is when Querying Tweets in timeline
+auth = tweepy.OAuth2BearerHandler(config.bearer_token)
+clientv1 = tweepy.API(auth)
 
 
-try:
-    username_test = input("Please enter username to display data")
+def get_tweets_from_user(twitter_user_name, page_limit=16, count_tweet=200):
+    """
+    @params:
+        - twitter_user_name: the twitter username of a user (company, etc.)
+        - page_limit: the total number of pages (max=16)
+        - count_tweet: maximum number to be retrieved from a page
 
-    response = client.get_user(username=username_test)
+    @return
+        - all the tweets from the user twitter_user_name
+    """
 
-    print(response.meta)
+    all_tweets = []
 
-    user = response.data
+    for page in Cursor(clientv1.user_timeline,
+                       screen_name=twitter_user_name,
+                       count=count_tweet).pages(page_limit):
+        for tweet in page:
+            parsed_tweet = {}
+            parsed_tweet['date'] = tweet.created_at
+            parsed_tweet['author'] = tweet.user.name
+            parsed_tweet['twitter_name'] = tweet.user.screen_name
+            parsed_tweet['text'] = tweet.text
+            parsed_tweet['number_of_likes'] = tweet.favorite_count
+            parsed_tweet['number_of_retweets'] = tweet.retweet_count
+
+            all_tweets.append(parsed_tweet)
+
+    # Create dataframe
     try:
-        user_data = {"ID": user.id,
-                     "name": user.name,
-                     "username": user.username
-                     }
-        print(user_data)
-    except AttributeError:
-        print("data was invalid In dict")
+        pd.DataFrame({'text': parsed_tweet['text']}, index=[0])
+    except UnboundLocalError:
+        print("Failed to edit data frame")
+
+    df = pd.DataFrame(all_tweets)
+
+    # Revome duplicates if there are any
+    df = df.drop_duplicates("text", keep='first')
+
+    return df
 
 
-    # for response in tweepy.Paginator(client.get_users_tweets,
-    #                              id=user.id,
-    #                              max_results=50,limit = 50):
-    #
-    #     print(response.data)
+def get_user_information(twitter_user_name):
+    """
+    <v2 API>
+@params:
+    - twitter_user_name: the twitter username of a user (company, etc.)
 
 
-    tweetcount = client.get_all_tweets_count()
+@return
+    - a dict of user info including:
+        -ID
+        -name
+        -username
+"""
+
+    response = client.get_user(username=twitter_user_name)
+    user = response.data
+    user_data = {"ID": user.id,
+                 "name": user.name,
+                 "username": user.username
+                 }
+    print(user_data)
+
+    return user_data
 
 
-except tweepy.errors.BadRequest or tweepy.errors.NotFound:
-    print("bad username")
+def auth_user_name(twitter_user_name):
+    """
+@params:
+- twitter_user_name: the twitter username of a user (company, etc.)
+
+
+@return
+-Boolean to see if user_name is found
+"""
+    try:
+        response = client.get_user(username=twitter_user_name)
+        return False
+
+    except tweepy.errors.BadRequest or tweepy.errors.NotFound:
+        return True
+
+
+flag = True  # While loop to auth username
+screen_name = "Null"
+
+while flag:
+    screen_name = input("Please enter your Twitter Handle")
+    flag = auth_user_name(screen_name)
+
+print(f"Your screen name is {screen_name}, Successfully Authenticated name")
+
+user_info = get_user_information(screen_name)
+user_timeline = get_tweets_from_user(screen_name)
+
+print("Data Shape: {}".format(user_timeline.shape))
+
+pd.set_option('display.max_colwidth', None)
+pd.set_option('display.max_rows', 2000)
+pd.set_option('display.max_columns', 2000)
+pd.set_option('display.width', 1000)
+
+print(user_timeline)
+
+print(user_info)
 
 # print(username_test + " is following these users")
 #
@@ -49,11 +129,9 @@ except tweepy.errors.BadRequest or tweepy.errors.NotFound:
 # print("This is the Users followers " + username_test)
 #
 #
-# followers = client.get_users_followers(id='1252678388269174784', user_fields=['username'],max_results = 1000)  # Followers of user #Big limitation which is 1000 followers might have to web scrape data for the other users.
-# follower_count = 0
-# for user in followers.data:
-#     follower_count += 1
-#     print(user.username)
+# followers = client.get_users_followers(id='1252678388269174784', user_fields=['username'],max_results = 1000)  #
+# Followers of user #Big limitation which is 1000 followers might have to web scrape data for the other users.  Can
+# be fixed with pagnination follower_count = 0 for user in followers.data: follower_count += 1 print(user.username)
 #
 # print("Follower count = " + str(follower_count)) #Limitation is 1000
 # print("Following  count = " + str(following_count)) #Limitation is 1000
