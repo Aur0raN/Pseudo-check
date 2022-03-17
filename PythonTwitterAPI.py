@@ -6,6 +6,15 @@ from tweepy import Cursor  # Used to perform pagination
 
 import config
 
+from datetime import datetime, timezone
+
+import pprint
+
+import json
+
+from dateutil.parser import parse
+import time
+
 client = tweepy.Client(config.bearer_token)  ##Version 2.0 Auth
 
 auth = tweepy.OAuth2BearerHandler(config.bearer_token)
@@ -78,6 +87,38 @@ def get_user_information(twitter_user_name):
     return user_data
 
 
+def get_user_info_v1(twitter_user_name):
+    """
+    <v1 API>
+@params:
+    - twitter_user_name: the twitter username of a user (company, etc.)
+
+
+@return
+    - a dict of user info including:
+        -ID
+        -name
+        -username
+        -tweet_count
+"""
+
+    response = clientv1.get_user(screen_name=twitter_user_name)
+
+    user_data = {"ID": response.id,
+                 "name": response.name,
+                 "username": response.screen_name,
+                 "Tweet Count": response.statuses_count,
+                 "Private": response.protected,
+                 "Followers Count": response.followers_count,
+                 "Following Count": response.friends_count,
+                 "Created At": response.created_at.strftime('%m/%d/%Y'),
+                 "Profile Image URL" : response.profile_image_url_https
+                 }
+    pprint.pprint(user_data)
+
+    return user_data
+
+
 def auth_user_name(twitter_user_name):
     """
 @params:
@@ -95,28 +136,56 @@ def auth_user_name(twitter_user_name):
         return True
 
 
-flag = True  # While loop to auth username
-screen_name = "Null"
+def check_acc_inactive(twitter_user_name):
+    """
+@params:
+- twitter_user_name: the twitter username of a user (company, etc.)
 
-while flag:
-    screen_name = input("Please enter your Twitter Handle")
-    flag = auth_user_name(screen_name)
 
-print(f"Your screen name is {screen_name}, Successfully Authenticated name")
+@return
+-Boolean to see if user_name is inactive
+"""
+    try:
+        tweet = clientv1.user_timeline(screen_name=twitter_user_name, count=1)[0]
 
-user_info = get_user_information(screen_name)
-user_timeline = get_tweets_from_user(screen_name)
+        current_date = datetime.now(timezone.utc)
+        tweet_date = tweet.created_at
+        delta = current_date - tweet_date
+        print(f"Days since last Post {delta}")
 
-print("Data Shape: {}".format(user_timeline.shape))
+        print(f"Last post on {tweet.created_at}")
 
-pd.set_option('display.max_colwidth', None)
-pd.set_option('display.max_rows', 2000)
-pd.set_option('display.max_columns', 2000)
-pd.set_option('display.width', 1000)
+        print(f"Current date is {current_date}")
 
-print(user_timeline)
+        print(f"Tweet ID is {tweet.id}")
 
-print(user_info)
+    except:
+        last_post = "user has not tweeted ever"
+        print(last_post)
+
+
+# flag = True  # While loop to auth username
+# screen_name = "Null"
+#
+# while flag:
+#     screen_name = input("Please enter your Twitter Handle")
+#     flag = auth_user_name(screen_name)
+#
+# print(f"Your screen name is {screen_name}, Successfully Authenticated name")
+#
+# check_acc_inactive(screen_name)
+# get_user_info_v1(screen_name)
+# # user_timeline = get_tweets_from_user(screen_name)
+#
+# print("Data Shape: {}".format(user_timeline.shape))
+#
+# pd.set_option('display.max_colwidth', None)
+# pd.set_option('display.max_rows', 2000)
+# pd.set_option('display.max_columns', 2000)
+# pd.set_option('display.width', 1000)
+#
+# print(user_timeline)
+
 
 # print(username_test + " is following these users")
 #
