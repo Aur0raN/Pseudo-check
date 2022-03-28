@@ -130,9 +130,10 @@ def auth_user_name(twitter_user_name):
 """
     try:
         response = client.get_user(username=twitter_user_name)
+        response2 = clientv1.get_user(screen_name=twitter_user_name)
         return False
 
-    except tweepy.errors.BadRequest or tweepy.errors.NotFound:
+    except Exception:
         return True
 
 
