@@ -1,24 +1,53 @@
+import joblib
 import tweepy
 
+from pandas import read_csv
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 from tweepy import Cursor  # Used to perform pagination
 
 import config
 
 from datetime import datetime, timezone
-
 import pprint
 
-import json
-
-from dateutil.parser import parse
 import time
+
+# Name of the saved model
 
 client = tweepy.Client(config.bearer_token)  ##Version 2.0 Auth
 
 auth = tweepy.OAuth2BearerHandler(config.bearer_token)
 clientv1 = tweepy.API(auth)
+
+
+def predict_model(messages):
+    path = r"train.csv"
+    data = read_csv(path)
+
+    x = data.iloc[:, 1].values
+    y = data.iloc[:, 7].values
+
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, random_state=0)
+    vectorizer = CountVectorizer()
+    counts = vectorizer.fit_transform(x_train)
+
+    classifier = MultinomialNB()
+
+    classifier.fit(counts, y_train)
+
+    messages_vectorized = vectorizer.transform(messages)
+    predictions = classifier.predict(messages_vectorized)
+
+
+    return predictions
 
 
 def get_tweets_from_user(twitter_user_name, page_limit=16, count_tweet=200):
@@ -31,35 +60,39 @@ def get_tweets_from_user(twitter_user_name, page_limit=16, count_tweet=200):
     @return
         - all the tweets from the user twitter_user_name
     """
-
-    all_tweets = []
-
-    for page in Cursor(clientv1.user_timeline,
-                       screen_name=twitter_user_name,
-                       count=count_tweet).pages(page_limit):
-        for tweet in page:
-            parsed_tweet = {}
-            parsed_tweet['date'] = tweet.created_at
-            parsed_tweet['author'] = tweet.user.name
-            parsed_tweet['twitter_name'] = tweet.user.screen_name
-            parsed_tweet['text'] = tweet.text
-            parsed_tweet['number_of_likes'] = tweet.favorite_count
-            parsed_tweet['number_of_retweets'] = tweet.retweet_count
-
-            all_tweets.append(parsed_tweet)
-
-    # Create dataframe
     try:
-        pd.DataFrame({'text': parsed_tweet['text']}, index=[0])
-    except UnboundLocalError:
-        print("Failed to edit data frame")
+        all_tweets = []
 
-    df = pd.DataFrame(all_tweets)
+        for page in Cursor(clientv1.user_timeline,
+                           screen_name=twitter_user_name,
+                           count=count_tweet, include_rts=False).pages(page_limit):
+            for tweet in page:
+                parsed_tweet = {}
+                parsed_tweet['date'] = tweet.created_at
+                parsed_tweet['author'] = tweet.user.name
+                parsed_tweet['twitter_name'] = tweet.user.screen_name
+                parsed_tweet['text'] = tweet.text
+                parsed_tweet['number_of_likes'] = tweet.favorite_count
+                parsed_tweet['number_of_retweets'] = tweet.retweet_count
+                all_tweets.append(parsed_tweet)
 
-    # Revome duplicates if there are any
-    df = df.drop_duplicates("text", keep='first')
+        # Create dataframe
+        # try:
+        #     pd.DataFrame({'text': parsed_tweet['text']}, index=[0])
+        # except UnboundLocalError:
+        #     print("Failed to edit data frame")
+        #
+        # df = pd.DataFrame(all_tweets)
+        #
+        # # Revome duplicates if there are any
+        # df = df.drop_duplicates("text", keep='first')
 
-    return df
+        return all_tweets
+    except Exception:
+        return None;
+
+
+
 
 
 def get_user_information(twitter_user_name):
@@ -112,7 +145,7 @@ def get_user_info_v1(twitter_user_name):
                  "Followers Count": response.followers_count,
                  "Following Count": response.friends_count,
                  "Created At": response.created_at.strftime('%m/%d/%Y'),
-                 "Profile Image URL" : response.profile_image_url_https
+                 "Profile Image URL": response.profile_image_url_https
                  }
     pprint.pprint(user_data)
 
@@ -165,6 +198,52 @@ def check_acc_inactive(twitter_user_name):
         print(last_post)
 
 
+def check_tweet_spam(twitter_user_name):
+    """
+    Checks first 20 tweets of the user and runs through a naive bayes classifier to check if its spam
+@params:
+    - twitter_user_name: the twitter username of a user (company, etc.)
+
+@return
+    - a list of data containing each tweet being Spam or Original
+"""
+    count = 0
+
+    tweet_list = get_tweets_from_user(twitter_user_name, 5, 20)
+    text_list = []
+
+    for data in tweet_list:
+        text_list.append(data['text'])
+
+    predictions = predict_model(text_list)
+
+    return predictions
+
+
+def check_percentage_spam(twitter_user_name):
+    """
+Checks first 20 tweets of the user and runs through a naive bayes classifier to check if its spam
+@params:
+- twitter_user_name: the twitter username of a user (company, etc.)
+
+@return
+- a percentage filtering out if the users account is spam or not
+"""
+    user_array = check_tweet_spam(twitter_user_name)
+    quality_count = 0
+    for value in user_array:
+        if value == 'Quality':
+            quality_count += 1
+
+    percentage = (quality_count / len(user_array)) * 100
+
+    originality_report = {
+        "Originality Percentage": percentage,
+        "Spam Percentage": 100 - percentage
+    }
+
+    return originality_report
+
 # flag = True  # While loop to auth username
 # screen_name = "Null"
 #
@@ -176,7 +255,11 @@ def check_acc_inactive(twitter_user_name):
 #
 # check_acc_inactive(screen_name)
 # get_user_info_v1(screen_name)
-# # user_timeline = get_tweets_from_user(screen_name)
+# tweet_list = get_tweets_from_user(screen_name,5,20)
+# print(check_percentage_spam(screen_name))
+
+
+# user_timeline = get_tweets_from_user(screen_name)
 #
 # print("Data Shape: {}".format(user_timeline.shape))
 #
