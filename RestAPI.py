@@ -1,8 +1,9 @@
 from flask import Flask
-from flask import Flask, render_template
+from flask import Flask, render_template, abort
 import json
 from flask import jsonify
 from flask import request
+import UserSuggestion
 
 app = Flask(__name__)
 
@@ -61,5 +62,11 @@ def get_tasks():
             if i not in main_lists:
                 main_lists.append(i)
     return 'OK', 201
+
+
+@app.route("/usersuggestions/<keyword>", methods=['GET'])
+def show_user_suggestions(keyword):
+        data = UserSuggestion.get_user_suggestion(keyword)
+        return jsonify(data), 200
 
 app.run(host='0.0.0.0', port=5000)
