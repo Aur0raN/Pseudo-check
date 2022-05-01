@@ -1,25 +1,76 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Button, Image, Alert, SafeAreaView, ScrollView } from 'react-native';
+import { View, StyleSheet, Button, Image, Alert, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import search from '../../assets/search.png';
 import { Text, TextInput, Provider } from 'react-native-paper';
-import { TouchableOpacity } from 'react-native-gesture-handler';
 import LogoImage from '../../assets/Logo.jpg';
+import axios from 'axios'
 
 export default AccountSearch = () => {
     const [twitterUserDetails, SetTwitterUserDetails] = useState({
-        "Created At": "06/02/2009",
-        "Followers Count": 83027770,
-        "Following Count": 114,
-        "ID": 44196397,
+        "Created At": "",
+        "Followers Count": 0,
+        "Following Count": 0,
+        "ID": 0,
         "Private": false,
-        "Profile Image URL": "https://pbs.twimg.com/profile_images/1503591435324563456/foUrqiEw_normal.jpg",
-        "Tweet Count": 17505,
-        "name": "Elon Musk",
-        "username": "elonmusk",
-        "Originality Percentage": 72.0,
-        "Spam Percentage": 28.0    
+        "Profile Image URL": "",
+        "Tweet Count": 0,
+        "name": "",
+        "username": "",
     });
 
+    const [userReportDetails, SetUserReportDetails] = useState({
+        "Originality Percentage": 0,
+        "Spam Percentage": 0    
+    });
+
+    const [isUserDataLoaded, setIsUserDataLoaded] = useState(false);
+
+    const [isAnalyse, setIsAnalyse] = useState(false);
+
+    //Search for a user
+    const Search = async (username) => {
+        if (username == null) {
+            Alert.alert('Please enter a account name');
+        }
+        else {
+            var URL = "https://pseudo-check.herokuapp.com/username/" + username;
+            await axios.get(URL).then(function (response) {
+                setIsUserDataLoaded(true);
+                setIsAnalyse(false);
+                SetTwitterUserDetails(response.data);
+                console.log(response.data);
+            }).catch(function (error) {
+                Alert.alert('No Account Found');
+            })    
+        }
+    };
+
+    //Get the user analysis report
+    const Analyse = () => {
+        if (twitterUserDetails.username.length == 0) {
+            Alert.alert('No User found!, To get analysis, search a Twitter user.', [{ text: 'Okay' }]);
+        } else{
+            const checkuser = async () => {
+                const URL = "https://pseudo-check.herokuapp.com/checkuser/" + twitterUserDetails.username;
+                await axios.get(URL).then(function (response) {
+                    setIsAnalyse(true);
+                    SetUserReportDetails(response.data);
+                    console.log(response.data);
+                }).catch(function (error) {
+                    Alert.alert('No Account Found');
+                })    
+            };
+            checkuser();
+        }
+    }
+
+    // Inisial the page and set user name
+    const Inisial = (name) => {
+        SetTwitterUserDetails({ username: name });
+        setIsUserDataLoaded(false);
+        setIsAnalyse(false);
+    }
+        
     return (
         <Provider>
             <ScrollView contentContainerStyle={{flexGrow: 1}}> 
@@ -36,14 +87,15 @@ export default AccountSearch = () => {
                                 selectionColor='#0000b2' 
                                 activeOutlineColor='#508cb2' 
                                 style={styles.seachInputText} label="UserName" 
-                                onChangeText={(val) => SetTwitterUserDetails({ username: val }) }
+                                onChangeText={(val) => Inisial(val) }
                             />
                         </View>
-                        <TouchableOpacity onPress={() => { Search(twitterUserDetails.username) }}>
+                        <TouchableOpacity onPress={() => {Search(twitterUserDetails.username)}}>
                             <Image source={search} style={styles.searchImage}></Image>
                         </TouchableOpacity>
                     </View>
                 </View>
+                {isUserDataLoaded == true ? 
                 <View style={styles.userDetails}>
                     <Text style={styles.systemAccountText}>Account Details</Text>
                     <Image
@@ -74,19 +126,22 @@ export default AccountSearch = () => {
                         <Text style={styles.systemTexts}>Created at :</Text>
                         <Text style={styles.accountText}>{twitterUserDetails['Created At']}</Text>
                     </View>
+                    <Button title="Analyse" color="#62bffa" onPress={() => {Analyse()}}/>
                 </View>
+                : null}
+                {isAnalyse == true ? 
                 <View style={styles.resultsContainer}>
-                <Button title="Analyse" color="#62bffa" onPress={() => {Analyse}}/>
                     <Text style={styles.resultText}>Results </Text>
                     <View style={styles.userDetail}>
                         <Text style={{ color: '#b2d8b2' }}>Originality Percentage :</Text>
-                        <Text style={{ color: '#4ca64c' }}>{twitterUserDetails['Originality Percentage']} %</Text>
+                        <Text style={{ color: '#4ca64c' }}>{userReportDetails['Originality Percentage']} %</Text>
                     </View>
                     <View style={styles.userDetail}>
                         <Text style={{ color: '#ffb2b2' }}>Spam Percentage :</Text>
-                        <Text style={{ color: '#ff4c4c' }}>{twitterUserDetails['Spam Percentage']} %</Text>
+                        <Text style={{ color: '#ff4c4c' }}>{userReportDetails['Spam Percentage']} %</Text>
                     </View>
                 </View>
+                : null}
             </SafeAreaView>
             </ScrollView>
         </Provider>
