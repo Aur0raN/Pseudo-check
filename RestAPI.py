@@ -64,9 +64,9 @@ def get_tasks():
     return 'OK', 201
 
 
-@app.route("/usersuggestions/<keyword>", methods=['GET'])
-def show_user_suggestions(keyword):
-        data = UserSuggestion.get_user_suggestion(keyword)
+@app.route("/usersuggestions/<q>/<count>/<page_limit>", methods=['GET'])
+def show_user_suggestions(q,count,page_limit):
+        data = UserSuggestion.get_user_suggestion(q,count,page_limit)
         return jsonify(data), 200
 
 app.run(host='0.0.0.0', port=5000)
