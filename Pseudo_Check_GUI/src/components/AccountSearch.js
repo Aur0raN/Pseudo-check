@@ -4,6 +4,7 @@ import search from '../../assets/search.png';
 import { Text, TextInput, Provider } from 'react-native-paper';
 import LogoImage from '../../assets/Logo.jpg';
 import axios from 'axios'
+import LinearGradient from 'react-native-linear-gradient';
 
 export default AccountSearch = () => {
     const [twitterUserDetails, SetTwitterUserDetails] = useState({
@@ -34,6 +35,7 @@ export default AccountSearch = () => {
         }
         else {
             var URL = "https://pseudo-check.herokuapp.com/username/" + username;
+            console.log(URL);
             await axios.get(URL).then(function (response) {
                 setIsUserDataLoaded(true);
                 setIsAnalyse(false);
@@ -41,6 +43,7 @@ export default AccountSearch = () => {
                 console.log(response.data);
             }).catch(function (error) {
                 Alert.alert('No Account Found');
+                console.log(error);
             })    
         }
     };
@@ -52,12 +55,14 @@ export default AccountSearch = () => {
         } else{
             const checkuser = async () => {
                 const URL = "https://pseudo-check.herokuapp.com/checkuser/" + twitterUserDetails.username;
+                console.log(URL);
                 await axios.get(URL).then(function (response) {
                     setIsAnalyse(true);
                     SetUserReportDetails(response.data);
                     console.log(response.data);
                 }).catch(function (error) {
                     Alert.alert('No Account Found');
+                    console.log(error);
                 })    
             };
             checkuser();
@@ -96,39 +101,50 @@ export default AccountSearch = () => {
                     </View>
                 </View>
                 {isUserDataLoaded == true ? 
-                <View style={styles.userDetails}>
-                    <Text style={styles.systemAccountText}>Account Details</Text>
-                    <Image
-                        style={styles.profilePicture}
-                        source={{uri:twitterUserDetails['Profile Image URL']}}
-                    />
-                    <View style={styles.userDetail}>
-                        <Text style={styles.systemTexts}>Name :</Text>
-                        <Text style={styles.accountText}>{twitterUserDetails.name}</Text>
+                    <View style={styles.userDetails}>
+                        <Text style={styles.systemAccountText}>Account Details</Text>
+                        <Image
+                            style={styles.profilePicture}
+                            source={{uri:twitterUserDetails['Profile Image URL']}}
+                        />
+                        <View style={styles.userDetail}>
+                            <Text style={styles.systemTexts}>Name :</Text>
+                            <Text style={styles.accountText}>{twitterUserDetails.name}</Text>
+                        </View>
+                        <View style={styles.userDetail}>
+                            <Text style={styles.systemTexts}>User Name :</Text>
+                            <Text style={styles.accountText}>@{twitterUserDetails.username}</Text>
+                        </View>
+                        <View style={styles.userDetail}>
+                            <Text style={styles.systemTexts}>Tweet Count :</Text>
+                            <Text style={styles.accountText}>{twitterUserDetails['Tweet Count']}</Text>
+                        </View>
+                        <View style={styles.userDetail}>
+                            <Text style={styles.systemTexts}>Number of followers :</Text>
+                            <Text style={styles.accountText}>{twitterUserDetails['Followers Count']}</Text>
+                        </View>
+                        <View style={styles.userDetail}>
+                            <Text style={styles.systemTexts}>Number of following :</Text>
+                            <Text style={styles.accountText}>{ twitterUserDetails['Following Count']  }</Text>
+                        </View>
+                        <View style={styles.userDetail}>
+                            <Text style={styles.systemTexts}>Created at :</Text>
+                            <Text style={styles.accountText}>{twitterUserDetails['Created At']}</Text>
+                        </View>
+                        {/* <Button title="Analyse" color="#62bffa" onPress={() => {Analyse()}}/> */}
+                        <View style={styles.headerContainer}>
+                            <TouchableOpacity onPress={() => { Analyse() }} >
+                                <LinearGradient colors={['#055C92', '#01ab9d']} style={styles.button}>
+                                    <Text style={styles.buttonText}>Analyse</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                    <View style={styles.userDetail}>
-                        <Text style={styles.systemTexts}>User Name :</Text>
-                        <Text style={styles.accountText}>@{twitterUserDetails.username}</Text>
+                : 
+                    <View style={styles.introductionContainer}>
+                        <Text style={styles.introductionText} >Pseudo-check is an application developed to analyze and show the twitter user a report of the user account's details and how genuine they are.</Text>
                     </View>
-                    <View style={styles.userDetail}>
-                        <Text style={styles.systemTexts}>Tweet Count :</Text>
-                        <Text style={styles.accountText}>{twitterUserDetails['Tweet Count']}</Text>
-                    </View>
-                    <View style={styles.userDetail}>
-                        <Text style={styles.systemTexts}>Number of followers :</Text>
-                        <Text style={styles.accountText}>{twitterUserDetails['Followers Count']}</Text>
-                    </View>
-                    <View style={styles.userDetail}>
-                        <Text style={styles.systemTexts}>Number of following :</Text>
-                        <Text style={styles.accountText}>{ twitterUserDetails['Following Count']  }</Text>
-                    </View>
-                    <View style={styles.userDetail}>
-                        <Text style={styles.systemTexts}>Created at :</Text>
-                        <Text style={styles.accountText}>{twitterUserDetails['Created At']}</Text>
-                    </View>
-                    <Button title="Analyse" color="#62bffa" onPress={() => {Analyse()}}/>
-                </View>
-                : null}
+                }
                 {isAnalyse == true ? 
                 <View style={styles.resultsContainer}>
                     <Text style={styles.resultText}>Results </Text>
@@ -263,4 +279,36 @@ const styles = StyleSheet.create({
     accountText:{
         color: '#055c92'
     },
+    button: {
+        alignItems: 'center',
+        marginTop: 20,
+        flex: 1,
+        flexDirection: 'row',
+    },
+    button: {
+        width: 150,
+        height: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 10,
+        margin: 10
+    },
+    buttonText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff'
+    },
+    introductionContainer: {
+        flex: 2,
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#b4cede',
+        width: 350
+    },
+    introductionText: {
+        color: '#034066',
+        marginHorizontal: 30,
+        marginVertical: 50,
+        fontSize: 20
+    }
 })
